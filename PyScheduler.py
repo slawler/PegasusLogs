@@ -4,7 +4,9 @@ PyScheduler.py
 Notes:
 1. Compatible with python v2 & v3
 2. No testing of wifi on/off
-3. Issues with ssh key identification
+3. Issues with ssh key identification persist
+4. Try/Except: socket errors due to connection
+5. Add email notifications for errors
 
 as of nov2016.12
 '''
@@ -47,7 +49,11 @@ device_table={#determined by physical check of each labelled probe
 
 #---Set Logging Parameters
 sample_rate = 10   #seconds
-logger_rate = 60  #seconds
+logger_rate = 5  #minutes
+
+#---Set Wifi to connect/disconnect
+wifi_on_rate = logger_rate - 2
+wifi_off_rate = logger_rate + 2 
 
 #---Mandatory when using multiple sensors
 os.system('modprobe w1-gpio') 
@@ -63,7 +69,7 @@ def setup_read():
     devices = []
     for d in device_folders:
         devadd = d[-12:].upper()
-        print("Reading From Device: ", devadd)
+        print("\nReading From Device: ", devadd)
         if devadd in device_table:
             devices.append(devadd)
     return(sorted(devices, key=sort_key))
@@ -88,6 +94,7 @@ def read_temp(d):
         return temp_c, temp_f
 
 devices = setup_read()
+
 '''
 print("  # address\n---------------")
 for d in devices:
@@ -102,8 +109,8 @@ print("\n"+len(devices)*"-----")
 #---Delete all scheduled jobs
 schedule.clear()
 
-#---Sampling funciton: Record data to log  
-def job1():
+#---Sampling function: Record data to log  
+def LogData():
     dtm  = datetime.now().strftime(format = '%d.%Y.%m %H:%M:%S')
     with open(log,'a') as f:
         for d in devices:
@@ -112,37 +119,65 @@ def job1():
             d_id = str(device_table[d.upper()])
             f.write(dtm + '\t' +d_id + '\t'+ '{}'.format(temps[0])+ '\n')   
 
+def WiFi_On():
+	print('Turning on WiFi')
+	cmd = 'sudo ifconfig wlan0 on'
+	os.system(cmd)
+	print('Wireless Up and Running')
+
+
+def WiFi_Off():
+	print('Turning off WiFi')
+	cmd = 'sudo ifconfig wlan0 down'
+	os.system(cmd)
+	print('Wireless Down')
 
 #---Logging funciton: Create Plot, Push updates to remote    
-def job2():
-    print("Updating Github")
-    os.system('/home/pi/UpdateGit.sh')
-    print("Creating Plots")
-    url = 'https://raw.githubusercontent.com/slawler/PegasusLogs/master/Temperature/Temperature.log'
-    cols = ['time','sensor', 'obs']
-    df= pd.read_csv(url, header = None, sep = '\t' ,names = cols)
-    df= df.set_index(pd.to_datetime(df['time'],format = '%d.%Y.%m %H:%M:%S'))
-    df.drop(labels='time',axis=1, inplace= True)
-    df = df.groupby([pd.TimeGrouper('{}min'.format(1)), 'sensor']).agg({'obs': np.mean})
-    df = df.unstack()
-    df.columns = df.columns.droplevel()
-        
+def GitPush():
+    try:
+        print("Updating Github")
+        os.system('/home/pi/UpdateGit.sh')
+        print("Creating Plots")
+        url = 'https://raw.githubusercontent.com/slawler/PegasusLogs/master/Temperature/Temperature.log'
+        cols = ['time','sensor', 'obs']
+        df= pd.read_csv(url, header = None, sep = '\t' ,names = cols)
+        df= df.set_index(pd.to_datetime(df['time'],format = '%d.%Y.%m %H:%M:%S'))
+        df.drop(labels='time',axis=1, inplace= True)
+        df = df.groupby([pd.TimeGrouper('{}min'.format(1)), 'sensor']).agg({'obs': np.mean})
+        df = df.unstack()
+        df.columns = df.columns.droplevel()
+            
 
-    #---Plot data from most recent log
-    plt.ioff()
-    fig = df.plot()
-    plt.title('Pegasus Temperature Log'+ '\n Begining {}'.format(df.index[0]))
-    plt.ylabel('Temperature (C)')
-    plt.xlabel('Time')
-    plt.grid(True)
-    plt.ylim((0,30))
-    plt.savefig('/home/pi/PegasusLogs/Temperature/temp.png')
-    plt.close()
+        #---Plot data from most recent log
+        plt.ioff()
+        fig = df.plot()
+        plt.title('Pegasus Temperature Log'+ '\n Begining {}'.format(df.index[0]))
+        plt.ylabel('Temperature (C)')
+        plt.xlabel('Time')
+        plt.grid(True)
+        plt.ylim((0,30))
+
+        plt.savefig('/home/pi/PegasusLogs/Temperature/temp.png')
+        plt.close()
+        os.system('/home/pi/UpdateGit.sh')
+    except:
+        print("ERROR")
+        
     return('') 
 
+#---Update Console 
+def job3():
+    dtm2  = datetime.now().strftime(format = '%d.%Y.%m %H:%M:%S')
+    print('Program Active: ', dtm2)
+
 #---Initialize Scheduler to call jobs
-schedule.every(sample_rate).seconds.do(job1)
-schedule.every(logger_rate).seconds.do(job2)
+schedule.every(sample_rate).seconds.do(LogData)
+schedule.every(wifi_on_rate).minutes.do(WiFi_On)
+
+schedule.every(logger_rate).minutes.do(GitPush)
+
+schedule.every(wifi_off_rate).minutes.do(WiFi_Off)
+schedule.every(10).seconds.do(job3)
 
 #---Run Jobs
 while True:
