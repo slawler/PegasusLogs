@@ -48,12 +48,8 @@ device_table={#determined by physical check of each labelled probe
 "0416807FF4FF" : "08"}
 
 #---Set Logging Parameters
-sample_rate = 10   #seconds
-logger_rate = 5  #minutes
-
-#---Set Wifi to connect/disconnect
-wifi_on_rate = logger_rate - 2
-wifi_off_rate = logger_rate + 2 
+sample_rate = 1  #minutes
+logger_rate = 2  #minutes
 
 #---Mandatory when using multiple sensors
 os.system('modprobe w1-gpio') 
@@ -121,7 +117,7 @@ def LogData():
 
 def WiFi_On():
 	print('Turning on WiFi')
-	cmd = 'sudo ifconfig wlan0 on'
+	cmd = 'sudo ifconfig wlan0 up'
 	os.system(cmd)
 	print('Wireless Up and Running')
 
@@ -135,9 +131,12 @@ def WiFi_Off():
 #---Logging funciton: Create Plot, Push updates to remote    
 def GitPush():
     try:
-        print("Updating Github")
+        print("Activating WiFi")      
+        WiFi_On()
+        time.sleep(60)
+        print("Updating Tabular data on Github")
         os.system('/home/pi/UpdateGit.sh')
-        print("Creating Plots")
+        print("\n...Creating Plots\n")
         url = 'https://raw.githubusercontent.com/slawler/PegasusLogs/master/Temperature/Temperature.log'
         cols = ['time','sensor', 'obs']
         df= pd.read_csv(url, header = None, sep = '\t' ,names = cols)
@@ -159,25 +158,26 @@ def GitPush():
 
         plt.savefig('/home/pi/PegasusLogs/Temperature/temp.png')
         plt.close()
+        print("Updating Plots for Webpage")
         os.system('/home/pi/UpdateGit.sh')
+        time.sleep(60)
+        WiFi_Off()
     except:
         print("ERROR")
         
     return('') 
 
 #---Update Console 
-def job3():
+def Print2Console():
     dtm2  = datetime.now().strftime(format = '%d.%Y.%m %H:%M:%S')
     print('Program Active: ', dtm2)
 
 #---Initialize Scheduler to call jobs
 schedule.every(sample_rate).seconds.do(LogData)
-schedule.every(wifi_on_rate).minutes.do(WiFi_On)
 
 schedule.every(logger_rate).minutes.do(GitPush)
 
-schedule.every(wifi_off_rate).minutes.do(WiFi_Off)
-schedule.every(10).seconds.do(job3)
+schedule.every(10).seconds.do(Print2Console)
 
 #---Run Jobs
 while True:
