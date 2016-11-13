@@ -48,8 +48,8 @@ device_table={#determined by physical check of each labelled probe
 "0416807FF4FF" : "08"}
 
 #---Set Logging Parameters
-sample_rate = 1  #minutes
-logger_rate = 2  #minutes
+sample_rate = 5  #minutes
+logger_rate = 60  #minutes
 
 #---Mandatory when using multiple sensors
 os.system('modprobe w1-gpio') 
@@ -114,7 +114,7 @@ def LogData():
             #print('{:4.1f}|'.format(temps[0]),end="")
             d_id = str(device_table[d.upper()])
             f.write(dtm + '\t' +d_id + '\t'+ '{}'.format(temps[0])+ '\n')   
-
+'''
 def WiFi_On():
 	print('Turning on WiFi')
 	cmd = 'sudo ifconfig wlan0 up'
@@ -127,13 +127,13 @@ def WiFi_Off():
 	cmd = 'sudo ifconfig wlan0 down'
 	os.system(cmd)
 	print('Wireless Down')
-
+'''
 #---Logging funciton: Create Plot, Push updates to remote    
 def GitPush():
     try:
         print("Activating WiFi")      
-        WiFi_On()
-        time.sleep(60)
+        #WiFi_On()
+        #time.sleep(60)
         print("Updating Tabular data on Github")
         os.system('/home/pi/UpdateGit.sh')
         print("\n...Creating Plots\n")
@@ -160,8 +160,8 @@ def GitPush():
         plt.close()
         print("Updating Plots for Webpage")
         os.system('/home/pi/UpdateGit.sh')
-        time.sleep(60)
-        WiFi_Off()
+        #time.sleep(60)
+        #WiFi_Off()
     except:
         print("ERROR")
         
@@ -172,10 +172,22 @@ def Print2Console():
     dtm2  = datetime.now().strftime(format = '%d.%Y.%m %H:%M:%S')
     print('Program Active: ', dtm2)
 
+'''
+#---Run Git Push at logon
+try:
+    time.sleep(1) #allow time for wifi connection
+    GitPush()
+except:
+    print('Error at initial git push')
+'''
+    
 #---Initialize Scheduler to call jobs
-schedule.every(sample_rate).seconds.do(LogData)
+#schedule.every(sample_rate).minutes.do(LogData)
+schedule.every(sample_rate).seconds.do(LogData) #For Testing\Debugging
 
-schedule.every(logger_rate).minutes.do(GitPush)
+
+#schedule.every(logger_rate).minutes.do(GitPush)
+schedule.every(logger_rate).seconds.do(GitPush) #For Testing\Debugging
 
 schedule.every(10).seconds.do(Print2Console)
 
