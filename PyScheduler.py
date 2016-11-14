@@ -3,9 +3,9 @@ PyScheduler.py
 
 Notes:
 1. Compatible with python v2 & v3
-2. No testing of wifi on/off
-3. Issues with ssh key identification persist
-4. Try/Except: socket errors due to connection
+2. Need to test wifi on/off 
+3. Issues with ssh key identification persist after reboot
+4. Try/Except: add socket errors due to connection
 5. Add email notifications for errors
 
 as of nov2016.12
@@ -117,14 +117,14 @@ def LogData():
 '''
 def WiFi_On():
 	print('Turning on WiFi')
-	cmd = 'sudo ifconfig wlan0 up'
+	cmd = 'sudo ifup wlan0'
 	os.system(cmd)
 	print('Wireless Up and Running')
 
 
 def WiFi_Off():
 	print('Turning off WiFi')
-	cmd = 'sudo ifconfig wlan0 down'
+	cmd = 'sudo ifdown wlan0'
 	os.system(cmd)
 	print('Wireless Down')
 '''
