@@ -91,17 +91,6 @@ def read_temp(d):
 
 devices = setup_read()
 
-'''
-print("  # address\n---------------")
-for d in devices:
-    print(" " + device_table[d.upper()] + " " + d)
-print(" ",end="")
-
-for d in devices:
-    print('{:s}'.format(" " + device_table[d.upper()]+ " |"),end="")
-print("\n"+len(devices)*"-----")
-'''
-
 #---Delete all scheduled jobs
 schedule.clear()
 
@@ -128,15 +117,8 @@ def WiFi_Off():
 	os.system(cmd)
 	print('Wireless Down')
 '''
-#---Logging funciton: Create Plot, Push updates to remote    
-def GitPush():
-    try:
-        print("Activating WiFi")      
-        #WiFi_On()
-        #time.sleep(60)
-        print("Updating Tabular data on Github")
-        os.system('/home/pi/UpdateGit.sh')
-        print("\n...Creating Plots\n")
+
+ def MakeTable():
         url = 'https://raw.githubusercontent.com/slawler/PegasusLogs/master/Temperature/Temperature.log'
         cols = ['time','sensor', 'obs']
         df= pd.read_csv(url, header = None, sep = '\t' ,names = cols)
@@ -146,7 +128,7 @@ def GitPush():
         df = df.unstack()
         df.columns = df.columns.droplevel()
             
-
+def PlotResults():
         #---Plot data from most recent log
         plt.ioff()
         fig = df.plot()
@@ -158,7 +140,18 @@ def GitPush():
 
         plt.savefig('/home/pi/PegasusLogs/Temperature/temp.png')
         plt.close()
+#---Logging funciton: Create Plot, Push updates to remote    
+def GitPush():
+    try:
+        print("Activating WiFi")      
+        #WiFi_On()
+        #time.sleep(60)
+        print("Updating Tabular data on Github")
+        os.system('/home/pi/UpdateGit.sh')
+        print("\n...Creating Plots\n")
+        MakeTable()
         print("Updating Plots for Webpage")
+	PlotResults()
         os.system('/home/pi/UpdateGit.sh')
         #time.sleep(60)
         #WiFi_Off()
