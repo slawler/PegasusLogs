@@ -8,7 +8,6 @@ Notes:
 4. Try/Except: add socket errors due to connection
 5. Add email notifications for errors
 
-as of nov2016.12
 '''
 #---Load Modules
 from __future__ import print_function
