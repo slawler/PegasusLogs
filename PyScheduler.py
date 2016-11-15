@@ -120,7 +120,7 @@ def WiFi_status():
     return status
 	
 def Observations_Table():
-    print("Updating Tabular data")
+    print("Updating Tabular data on Github")
     url = 'https://raw.githubusercontent.com/slawler/PegasusLogs/master/Temperature/Temperature.log'
     cols = ['time','sensor', 'obs']
     df= pd.read_csv(url, header = None, sep = '\t' ,names = cols)
@@ -132,11 +132,11 @@ def Observations_Table():
     return df   
 
 def Plot_Maker(df,log):
+    print("Updating Plots for Webpage")
     import matplotlib.pyplot as plt
-    print("Updating Plots")
     plt.ioff()
     fig = df.plot()
-    plt.title('Pegasus Temperature Log'+ '\n Begining {}'.format(df.index[0]))
+    plt.title('Pegasus Temperature Log'+ '\n Begining {} \'.format(df.index[0]))
     plt.ylabel('Temperature (C)')
     plt.xlabel('Time')
     plt.grid(True)
@@ -150,9 +150,9 @@ def GitPush():
     shutil.copy(log, os.path.join(log_dir,'Temperature.log'))
     try:
         WiFi_On()
-        time.sleep(30)
+        time.sleep(30)   
         os.system('/home/pi/UpdateGit.sh')
-        df = Observations_Table()   
+        df = Observations_Table()
         Plot_Maker(df, log)
         os.system('/home/pi/UpdateGit.sh')
         time.sleep(30)
@@ -167,23 +167,20 @@ def Print2Console():
     dtm2  = datetime.now().strftime(format = '%d.%Y.%m %H:%M:%S')
     print('Program Active: ', dtm2)
 
-
 #---Run Git Push at logon
 try:
     print('Git pushing for initial log-in')
     GitPush()
 except:
     print('Error at initial git push')
-
     
 #---Initialize Scheduler to call jobs
-#schedule.every(sample_rate).minutes.do(LogData)
-schedule.every(sample_rate).seconds.do(LogData) #For Testing\Debugging
+#schedule.every(sample_rate).seconds.do(LogData) #For Testing\Debugging
+#schedule.every(logger_rate).seconds.do(GitPush) #For Testing\Debugging
+#schedule.every(10).seconds.do(Print2Console)    #For Testing\Debugging
 
-#schedule.every(logger_rate).minutes.do(GitPush)
-schedule.every(logger_rate).seconds.do(GitPush) #For Testing\Debugging
-
-schedule.every(10).seconds.do(Print2Console)
+schedule.every(sample_rate).minutes.do(LogData)
+schedule.every(logger_rate).minutes.do(GitPush)
 
 #---Run Jobs
 while True:
