@@ -1,0 +1,4 @@
+pi@raspberrypi:~/PegasusLogs $ git remote -v
+pi@raspberrypi:~/PegasusLogs $ git remote rm origin
+pi@raspberrypi:~/PegasusLogs $ git remote add origin ssh://git@github.com/slawler/PegasusLogs
+
