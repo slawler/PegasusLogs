@@ -2,35 +2,32 @@
 PyScheduler.py
 
 Notes:
-1. Compatible with python v2 & v3
-2. Need to test wifi on/off 
-3. Issues with ssh key identification persist after reboot
-4. Try/Except: add socket errors due to connection
-5. Add email notifications for errors
+1. Issues with ssh key identification persist
+2. Add email notifications for errors
 
 '''
 #---Load Modules
 from __future__ import print_function
 import os
+import urllib.request
 import glob
 import time
 import numpy as np
 import matplotlib as mpl
 mpl.use('Agg')
-import matplotlib.pyplot as plt
 import pandas as pd
-from datetime import datetime 
-import time
+from datetime import datetime
+import shutil
 import schedule
 import subprocess
 import html5lib
 
-
 #---Assign directories & filename
+now = datetime.now()
 log_dir = '/home/pi/PegasusLogs/Temperature'
-log_file = 'Temperature.log'
+log_file = str(now.month) + '_' + str(now.year) + '.txt'
 log = os.path.join(log_dir,log_file)
-
+ 
 base_dir='/sys/bus/w1/devices/'
 device_folders = glob.glob(base_dir + '28*')
 print(device_folders)
@@ -90,17 +87,6 @@ def read_temp(d):
 
 devices = setup_read()
 
-'''
-print("  # address\n---------------")
-for d in devices:
-    print(" " + device_table[d.upper()] + " " + d)
-print(" ",end="")
-
-for d in devices:
-    print('{:s}'.format(" " + device_table[d.upper()]+ " |"),end="")
-print("\n"+len(devices)*"-----")
-'''
-
 #---Delete all scheduled jobs
 schedule.clear()
 
@@ -110,57 +96,67 @@ def LogData():
     with open(log,'a') as f:
         for d in devices:
             temps = read_temp(d)
-            #print('{:4.1f}|'.format(temps[0]),end="")
             d_id = str(device_table[d.upper()])
             f.write(dtm + '\t' +d_id + '\t'+ '{}'.format(temps[0])+ '\n')   
-'''
+
 def WiFi_On():
 	print('Turning on WiFi')
 	cmd = 'sudo ifup wlan0'
 	os.system(cmd)
 	print('Wireless Up and Running')
 
-
 def WiFi_Off():
 	print('Turning off WiFi')
 	cmd = 'sudo ifdown wlan0'
 	os.system(cmd)
 	print('Wireless Down')
-'''
+
+def WiFi_status():
+    try:
+        urllib.request.urlopen('https://www.google.com')
+        status = "Connected"
+    except:
+        status = "Not Connected"
+    return status
+	
+def Observations_Table():
+    print("Updating Tabular data")
+    url = 'https://raw.githubusercontent.com/slawler/PegasusLogs/master/Temperature/Temperature.log'
+    cols = ['time','sensor', 'obs']
+    df= pd.read_csv(url, header = None, sep = '\t' ,names = cols)
+    df= df.set_index(pd.to_datetime(df['time'],format = '%d.%Y.%m %H:%M:%S'))
+    df.drop(labels='time',axis=1, inplace= True)
+    df = df.groupby([pd.TimeGrouper('{}min'.format(1)), 'sensor']).agg({'obs': np.mean})
+    df = df.unstack()
+    df.columns = df.columns.droplevel()
+    return df   
+
+def Plot_Maker(df,log):
+    import matplotlib.pyplot as plt
+    print("Updating Plots")
+    plt.ioff()
+    fig = df.plot()
+    plt.title('Pegasus Temperature Log'+ '\n Begining {}'.format(df.index[0]))
+    plt.ylabel('Temperature (C)')
+    plt.xlabel('Time')
+    plt.grid(True)
+    plt.ylim((0,30))
+    plt.savefig('/home/pi/PegasusLogs/Temperature/temp.png', dpi = 600)
+    plt.savefig('{}.png'.format(log[:-4]))
+    plt.close()
+
 #---Logging funciton: Create Plot, Push updates to remote    
 def GitPush():
+    shutil.copy(log, os.path.join(log_dir,'Temperature.log'))
     try:
-        print("Activating WiFi")      
-        #WiFi_On()
-        #time.sleep(60)
-        print("Updating Tabular data on Github")
+        WiFi_On()
+        time.sleep(30)
         os.system('/home/pi/UpdateGit.sh')
-        print("\n...Creating Plots\n")
-        url = 'https://raw.githubusercontent.com/slawler/PegasusLogs/master/Temperature/Temperature.log'
-        cols = ['time','sensor', 'obs']
-        df= pd.read_csv(url, header = None, sep = '\t' ,names = cols)
-        df= df.set_index(pd.to_datetime(df['time'],format = '%d.%Y.%m %H:%M:%S'))
-        df.drop(labels='time',axis=1, inplace= True)
-        df = df.groupby([pd.TimeGrouper('{}min'.format(1)), 'sensor']).agg({'obs': np.mean})
-        df = df.unstack()
-        df.columns = df.columns.droplevel()
-            
-
-        #---Plot data from most recent log
-        plt.ioff()
-        fig = df.plot()
-        plt.title('Pegasus Temperature Log'+ '\n Begining {}'.format(df.index[0]))
-        plt.ylabel('Temperature (C)')
-        plt.xlabel('Time')
-        plt.grid(True)
-        plt.ylim((0,30))
-
-        plt.savefig('/home/pi/PegasusLogs/Temperature/temp.png')
-        plt.close()
-        print("Updating Plots for Webpage")
+        df = Observations_Table()   
+        Plot_Maker(df, log)
         os.system('/home/pi/UpdateGit.sh')
-        #time.sleep(60)
-        #WiFi_Off()
+        time.sleep(30)
+        WiFi_Off()
     except:
         print("ERROR")
         
@@ -171,19 +167,18 @@ def Print2Console():
     dtm2  = datetime.now().strftime(format = '%d.%Y.%m %H:%M:%S')
     print('Program Active: ', dtm2)
 
-'''
+
 #---Run Git Push at logon
 try:
-    time.sleep(1) #allow time for wifi connection
+    print('Git pushing for initial log-in')
     GitPush()
 except:
     print('Error at initial git push')
-'''
+
     
 #---Initialize Scheduler to call jobs
 #schedule.every(sample_rate).minutes.do(LogData)
 schedule.every(sample_rate).seconds.do(LogData) #For Testing\Debugging
-
 
 #schedule.every(logger_rate).minutes.do(GitPush)
 schedule.every(logger_rate).seconds.do(GitPush) #For Testing\Debugging
