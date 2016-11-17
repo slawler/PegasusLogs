@@ -144,7 +144,9 @@ def Plot_Maker(df,log):
     plt.ylabel('Temperature (C)')
     plt.xlabel('Time')
     plt.grid(True)
-    plt.ylim((0,30))
+    y_min = df.min().mean()*0.8
+    y_max = df.max().mean()*1.2          
+    plt.ylim((y_min,y_max))
     plt.savefig('/home/pi/PegasusLogs/Temperature/temp.png', dpi = 600)
     plt.savefig('{}.png'.format(log[:-4]))
     plt.close()
