@@ -13,6 +13,7 @@ import urllib.request
 import glob
 import time
 import numpy as np
+from scipy import interpolate
 import matplotlib as mpl
 mpl.use('Agg')
 import pandas as pd
@@ -129,6 +130,9 @@ def Observations_Table():
     df = df.groupby([pd.TimeGrouper('{}min'.format(1)), 'sensor']).agg({'obs': np.mean})
     df = df.unstack()
     df.columns = df.columns.droplevel()
+    df = df.resample('100min').mean()
+    df = df.resample('10min').mean()
+    df = df.interpolate(method = 'cubic')
     return df   
 
 def Plot_Maker(df,log):
