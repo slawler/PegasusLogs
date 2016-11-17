@@ -45,7 +45,7 @@ device_table={#determined by physical check of each labelled probe
 
 #---Set Logging Parameters
 sample_rate = 5  #minutes
-logger_rate = 60  #minutes
+logger_rate = 180  #minutes
 
 #---Mandatory when using multiple sensors
 os.system('modprobe w1-gpio') 
