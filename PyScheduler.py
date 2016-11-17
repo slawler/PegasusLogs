@@ -127,7 +127,7 @@ def Observations_Table():
     df= pd.read_csv(url, header = None, sep = '\t' ,names = cols)
     df= df.set_index(pd.to_datetime(df['time'],format = '%d.%Y.%m %H:%M:%S'))
     df.drop(labels='time',axis=1, inplace= True)
-    df = df.groupby([pd.TimeGrouper('{}min'.format(1)), 'sensor']).agg({'obs': np.mean})
+    df = df.groupby([pd.TimeGrouper('{}min'.format(5)), 'sensor']).agg({'obs': np.mean})
     df = df.unstack()
     df.columns = df.columns.droplevel()
     df = df.resample('100min').mean()
@@ -140,12 +140,12 @@ def Plot_Maker(df,log):
     import matplotlib.pyplot as plt
     plt.ioff()
     fig = df.plot()
-    plt.title('Pegasus Temperature Log'+ '\n Begining {} \'.format(df.index[0]))
+    plt.title('Pegasus Temperature Log'+ '\n Begining {}'.format(df.index[0]))
     plt.ylabel('Temperature (C)')
     plt.xlabel('Time')
     plt.grid(True)
     y_min = df.min().mean()*0.8
-    y_max = df.max().mean()*1.2          
+    y_max = df.max().mean()*1.2
     plt.ylim((y_min,y_max))
     plt.savefig('/home/pi/PegasusLogs/Temperature/temp.png', dpi = 600)
     plt.savefig('{}.png'.format(log[:-4]))
