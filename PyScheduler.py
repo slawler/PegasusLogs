@@ -125,12 +125,12 @@ def WiFi_status():
 def SendAlert():
 	server = smtplib.SMTP('smtp.gmail.com',587)
 	server.starttls()
-	server.login('pegasuspimessenger@gmail.com', 'D@taCollector')
+	server.login('senders_email@email.com', 'password')
 	subject = 'Automated-Alert (Test)'
 	txt = 'Temperature Warning: https://slawler.github.io/temperature_data.html'
 	msg = "Subject: {}\n\n{}".format(subject,txt)
-	recipients = ['sethlawler@gmail.com','antonioe@verizon.net']
-	server.sendmail('pegasuspimessenger@gmail.com',recipients, msg)
+	recipients = ['email2@email','email1@email.com']
+	server.sendmail('senders_email@email.com',recipients, msg)
 	server.quit()
 	
 def Observations_Table():
