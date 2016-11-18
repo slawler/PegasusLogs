@@ -22,6 +22,7 @@ import shutil
 import schedule
 import subprocess
 import html5lib
+import smtplib
 
 #---Assign directories & filename
 now = datetime.now()
@@ -47,6 +48,7 @@ device_table={#determined by physical check of each labelled probe
 #---Set Logging Parameters
 sample_rate = 5  #minutes
 logger_rate = 180  #minutes
+temp_threshold = 10
 
 #---Mandatory when using multiple sensors
 os.system('modprobe w1-gpio') 
@@ -119,6 +121,17 @@ def WiFi_status():
     except:
         status = "Not Connected"
     return status
+
+def SendAlert():
+	server = smtplib.SMTP('smtp.gmail.com',587)
+	server.starttls()
+	server.login('pegasuspimessenger@gmail.com', 'D@taCollector')
+	subject = 'Automated-Alert (Test)'
+	txt = 'Temperature Warning: https://slawler.github.io/temperature_data.html'
+	msg = "Subject: {}\n\n{}".format(subject,txt)
+	recipients = ['sethlawler@gmail.com','antonioe@verizon.net']
+	server.sendmail('pegasuspimessenger@gmail.com',recipients, msg)
+	server.quit()
 	
 def Observations_Table():
     print("Updating Tabular data on Github")
@@ -159,6 +172,8 @@ def GitPush():
         time.sleep(30)   
         os.system('/home/pi/UpdateGit.sh')
         df = Observations_Table()
+        if df.min().min() < 5:
+            SendAlert()
         Plot_Maker(df, log)
         os.system('/home/pi/UpdateGit.sh')
         time.sleep(30)
