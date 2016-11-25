@@ -3,7 +3,6 @@ PyScheduler.py
 
 Notes:
 1. Issues with ssh key identification persist
-2. Add email notifications for errors
 
 '''
 #---Load Modules
@@ -23,6 +22,9 @@ import schedule
 import subprocess
 import html5lib
 import smtplib
+
+#---Activate ssh key
+os.system('/home/pi/add_key.sh')
 
 #---Assign directories & filename
 now = datetime.now()
@@ -46,7 +48,7 @@ device_table={#determined by physical check of each labelled probe
 "0416807FF4FF" : "08"}
 
 #---Set Logging Parameters
-sample_rate = 5  #minutes
+sample_rate = 10  #minutes
 logger_rate = 180  #minutes
 temp_threshold = 10
 
@@ -125,12 +127,13 @@ def WiFi_status():
 def SendAlert():
 	server = smtplib.SMTP('smtp.gmail.com',587)
 	server.starttls()
-	server.login('senders_email@email.com', 'password')
+	server.login('pegasuspimessenger@gmail.com', 'D@taCollector')
 	subject = 'Automated-Alert (Test)'
 	txt = 'Temperature Warning: https://slawler.github.io/temperature_data.html'
 	msg = "Subject: {}\n\n{}".format(subject,txt)
-	recipients = ['email2@email','email1@email.com']
-	server.sendmail('senders_email@email.com',recipients, msg)
+	#recipients = ['sethlawler@gmail.com' ,'antonioe@verizon.net']
+	recipients = ['sethlawler@gmail.com']
+	server.sendmail('pegasuspimessenger@gmail.com',recipients, msg)
 	server.quit()
 	
 def Observations_Table():
@@ -169,14 +172,14 @@ def GitPush():
     shutil.copy(log, os.path.join(log_dir,'Temperature.log'))
     try:
         WiFi_On()
-        time.sleep(30)   
+        time.sleep(60)   
         os.system('/home/pi/UpdateGit.sh')
         df = Observations_Table()
-        if df.min().min() < 5:
-            SendAlert()
+        #if df.min().min() < 5: #need to set an index threshold: check only the last ~4 hours 
+        #SendAlert()
         Plot_Maker(df, log)
         os.system('/home/pi/UpdateGit.sh')
-        time.sleep(30)
+        time.sleep(60)
         WiFi_Off()
     except:
         print("ERROR")
